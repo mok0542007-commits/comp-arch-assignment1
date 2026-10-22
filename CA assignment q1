@@ -1,0 +1,56 @@
+BITS = 8
+MASK = 0xFF          # 11111111
+SIGN = 0x80          # 10000000
+
+def to_bin(n):
+    """Decimal -> 8-bit 2's complement string."""
+    if not -128 <= n <= 127:
+        raise ValueError("Out of 8-bit signed range")
+    return format(n & MASK, "08b")
+
+def to_dec(bits):
+    """8-bit 2's complement string -> decimal."""
+    v = int(bits, 2)
+    return v - 256 if v & SIGN else v
+
+def negate(x):
+    """2's complement negation: invert bits, add 1."""
+    return (~x + 1) & MASK
+
+def add8(a, b):
+    """Add two 8-bit patterns. Returns (result, carry_into_MSB, carry_out_of_MSB)."""
+    total = a + b
+    result = total & MASK
+    c_out = total >> 8
+    c_in = ((a & 0x7F) + (b & 0x7F)) >> 7
+    return result, c_in, c_out
+
+def calculate(a_dec, b_dec, op):
+    a = int(to_bin(a_dec), 2)
+    b = int(to_bin(b_dec), 2)
+
+    print(f"Expression : ({a_dec:+}) {op} ({b_dec:+})")
+    print(f"A          : {a:08b}  ({a_dec})")
+    print(f"B          : {b:08b}  ({b_dec})")
+
+    if op == "-":
+        b_used = negate(b)
+        print(f"-B (2's c.): {b_used:08b}  ({-b_dec})   <- A - B = A + (-B)")
+    else:
+        b_used = b
+
+    result, c_in, c_out = add8(a, b_used)
+    overflow = c_in ^ c_out          # carry into MSB XOR carry out of MSB
+
+    print(f"Carry into MSB = {c_in}, Carry out of MSB = {c_out}")
+    print(f"Result     : {result:08b}")
+    print(f"Decimal    : {to_dec(format(result, '08b'))}")
+    print(f"Overflow   : {'YES' if overflow else 'NO'}")
+
+    expected = a_dec + b_dec if op == "+" else a_dec - b_dec
+    print(f"Check      : expected {expected}, got {to_dec(format(result, '08b'))} ->",
+          "MATCH" if expected == to_dec(format(result, '08b')) else "MISMATCH (overflow)")
+    print("-" * 50)
+
+calculate(46, 29, "+")      # a) +46 + (+29)
+calculate(-48, -23, "-")    # b) (-48) - (-23)
